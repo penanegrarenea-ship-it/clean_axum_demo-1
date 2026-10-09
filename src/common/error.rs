@@ -4,7 +4,7 @@ use axum::{
     BoxError,
 };
 
-use sqlx::Error as SqlxError;
+use sea_orm::DbErr;
 use thiserror::Error;
 use tracing::error;
 
@@ -17,7 +17,7 @@ use super::dto::ApiResponse;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Database error: {0}")]
-    DatabaseError(#[from] SqlxError), // Used for database-related errors
+    DatabaseError(#[from] DbErr), // Used for database-related errors (SeaORM)
 
     #[error("Not found: {0}")]
     NotFound(String), // Used for not found errors

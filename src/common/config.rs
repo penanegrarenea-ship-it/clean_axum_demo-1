@@ -1,5 +1,5 @@
 use regex::Regex;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sea_orm::{DatabaseConnection, DbErr};
 use std::env;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -67,19 +67,14 @@ impl Config {
     }
 }
 
-/// setup_database initializes the database connection pool.
-pub async fn setup_database(config: &Config) -> Result<PgPool, sqlx::Error> {
+/// setup_database initializes the SeaORM database connection (pool).
+pub async fn setup_database(config: &Config) -> Result<DatabaseConnection, DbErr> {
     // Attempt to connect repeatedly, with a small delay, until success (or a max number of tries)
     let mut attempts = 0;
-    let pool = loop {
+    let db = loop {
         attempts += 1;
-        match PgPoolOptions::new()
-            .max_connections(config.database_max_connections)
-            .min_connections(config.database_min_connections)
-            .connect(&config.database_url)
-            .await
-        {
-            Ok(pool) => break pool,
+        match crate::infra::db::connect(config).await {
+            Ok(db) => break db,
             Err(err) => {
                 if attempts >= 3 {
                     return Err(err);
@@ -93,5 +88,5 @@ pub async fn setup_database(config: &Config) -> Result<PgPool, sqlx::Error> {
         }
     };
 
-    Ok(pool)
+    Ok(db)
 }

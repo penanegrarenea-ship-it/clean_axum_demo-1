@@ -34,8 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
 
     let config = Config::from_env()?;
-    let pool = setup_database(&config).await?;
-    let state = build_app_state(pool, config.clone());
+    let db = setup_database(&config).await?;
+    let state = build_app_state(db, config.clone());
     let app = create_router(state);
 
     let addr = format!("{}:{}", config.service_host, config.service_port);

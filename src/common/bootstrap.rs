@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 
 use crate::common::config::Config;
 use crate::domains::auth::{AuthService, AuthServiceTrait};
@@ -12,13 +12,13 @@ use crate::{common::app_state::AppState, domains::user::UserService};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Constructs and wires all application services and returns a configured AppState.
-pub fn build_app_state(pool: PgPool, config: Config) -> AppState {
-    let auth_service: Arc<dyn AuthServiceTrait> = AuthService::create_service(pool.clone());
+pub fn build_app_state(db: DatabaseConnection, config: Config) -> AppState {
+    let auth_service: Arc<dyn AuthServiceTrait> = AuthService::create_service(db.clone());
     let file_service: Arc<dyn FileServiceTrait> =
-        FileService::create_service(config.clone(), pool.clone());
+        FileService::create_service(config.clone(), db.clone());
     let user_service: Arc<dyn UserServiceTrait> =
-        UserService::create_service(pool.clone(), Arc::clone(&file_service));
-    let device_service: Arc<dyn DeviceServiceTrait> = DeviceService::create_service(pool.clone());
+        UserService::create_service(db.clone(), Arc::clone(&file_service));
+    let device_service: Arc<dyn DeviceServiceTrait> = DeviceService::create_service(db);
 
     AppState::new(
         config,
@@ -36,8 +36,9 @@ pub fn setup_tracing() {
 
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,sqlx=info,tower_http=info,axum::rejection=trace".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "info,sqlx=info,sea_orm=info,tower_http=info,axum::rejection=trace".into()
+            }),
         )
         .with(
             tracing_subscriber::fmt::layer()

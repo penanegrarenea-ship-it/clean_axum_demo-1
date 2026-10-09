@@ -1,4 +1,4 @@
-FROM rust:1.86-slim AS builder
+FROM rust:1.99-slim AS builder
 
 WORKDIR /app
 
@@ -7,12 +7,6 @@ RUN apt-get update && apt-get install -y libssl-dev pkg-config curl
 
 # Copy sources
 COPY . .
-
-# Copy SQLx query metadata for offline mode
-COPY .sqlx .sqlx
-
-# sqlx offline mode
-ENV SQLX_OFFLINE=true
 
 # Build in release mode
 RUN cargo build --release

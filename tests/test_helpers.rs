@@ -22,7 +22,8 @@ use clean_axum_demo::{
     },
 };
 
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use clean_axum_demo::infra::db::connect;
+use sea_orm::DatabaseConnection;
 use tower::ServiceExt;
 
 static INIT: Once = Once::new();
@@ -49,24 +50,20 @@ fn load_test_env() {
 }
 
 /// Helper function to set up the test database state
-pub async fn setup_test_db() -> Result<PgPool, Box<dyn std::error::Error>> {
+pub async fn setup_test_db() -> Result<DatabaseConnection, Box<dyn std::error::Error>> {
     load_test_env();
     let config = Config::from_env()?;
 
-    let pool = PgPoolOptions::new()
-        .max_connections(config.database_max_connections)
-        .min_connections(config.database_min_connections)
-        .connect(&config.database_url)
-        .await?;
+    let db = connect(&config).await?;
 
-    Ok(pool)
+    Ok(db)
 }
 
 /// Helper function to create a test router
 pub async fn create_test_router() -> Router {
-    let pool = setup_test_db().await.unwrap();
+    let db = setup_test_db().await.unwrap();
     let config = Config::from_env().unwrap();
-    let state = build_app_state(pool, config.clone());
+    let state = build_app_state(db, config.clone());
     let app = create_router(state);
 
     app
