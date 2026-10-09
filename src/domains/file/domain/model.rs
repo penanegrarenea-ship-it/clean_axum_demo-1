@@ -4,11 +4,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    decode::Decode,
-    postgres::{PgTypeInfo, PgValueRef},
-    FromRow, Postgres, Type,
-};
 use std::{fmt, str::FromStr};
 use utoipa::ToSchema;
 
@@ -55,25 +50,8 @@ impl From<String> for FileType {
     }
 }
 
-impl<'r> Decode<'r, Postgres> for FileType {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let s = <&str as Decode<Postgres>>::decode(value)?;
-        Ok(FileType::from_str(s)?)
-    }
-}
-
-impl Type<Postgres> for FileType {
-    fn type_info() -> PgTypeInfo {
-        <&str as Type<Postgres>>::type_info()
-    }
-
-    fn compatible(ty: &PgTypeInfo) -> bool {
-        <&str as Type<Postgres>>::compatible(ty)
-    }
-}
-
 /// Domain model representing metadata for a file uploaded by a user.
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone)]
 pub struct UploadedFile {
     pub id: String,
     pub user_id: String,

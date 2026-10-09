@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use sqlx::{PgPool, Postgres, Transaction};
+use sea_orm::{DatabaseConnection, DatabaseTransaction};
 
 use crate::{
     common::{config::Config, error::AppError},
@@ -17,7 +17,7 @@ use crate::{
 /// retrieving metadata, and deleting files.
 pub trait FileServiceTrait: Send + Sync {
     /// constructor for the service.
-    fn create_service(config: Config, pool: PgPool) -> Arc<dyn FileServiceTrait>
+    fn create_service(config: Config, db: DatabaseConnection) -> Arc<dyn FileServiceTrait>
     where
         Self: Sized;
 
@@ -25,7 +25,7 @@ pub trait FileServiceTrait: Send + Sync {
     /// Returns the uploaded file's metadata on success.
     async fn process_profile_picture_upload(
         &self,
-        tx: &mut Transaction<'_, Postgres>,
+        tx: &DatabaseTransaction,
         upload_file_dto: &UploadFileDto,
     ) -> Result<Option<UploadedFileDto>, AppError>;
 
