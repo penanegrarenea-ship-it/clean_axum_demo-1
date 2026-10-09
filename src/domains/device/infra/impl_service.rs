@@ -8,7 +8,7 @@ use crate::{
 };
 
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sea_orm::{DatabaseConnection, TransactionTrait};
 use std::sync::Arc;
 
 /// Service struct for handling device-related operations
@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// It uses a repository pattern to abstract the data access layer.
 #[derive(Clone)]
 pub struct DeviceService {
-    pool: PgPool,
+    db: DatabaseConnection,
     repo: Arc<dyn DeviceRepository + Send + Sync>,
 }
 
@@ -24,16 +24,16 @@ pub struct DeviceService {
 #[async_trait]
 impl DeviceServiceTrait for DeviceService {
     /// constructor for the service.
-    fn create_service(pool: PgPool) -> Arc<dyn DeviceServiceTrait> {
+    fn create_service(db: DatabaseConnection) -> Arc<dyn DeviceServiceTrait> {
         Arc::new(Self {
-            pool,
+            db,
             repo: Arc::new(DeviceRepo {}),
         })
     }
 
     /// get device by id
     async fn get_device_by_id(&self, id: String) -> Result<DeviceDto, AppError> {
-        match self.repo.find_by_id(self.pool.clone(), id).await {
+        match self.repo.find_by_id(&self.db, id).await {
             Ok(Some(device)) => Ok(DeviceDto::from(device)),
             Ok(None) => Err(AppError::NotFound("Device not found".into())),
             Err(err) => {
@@ -45,7 +45,7 @@ impl DeviceServiceTrait for DeviceService {
 
     /// get devices
     async fn get_devices(&self) -> Result<Vec<DeviceDto>, AppError> {
-        match self.repo.find_all(self.pool.clone()).await {
+        match self.repo.find_all(&self.db).await {
             Ok(devices) => {
                 let device_dtos: Vec<DeviceDto> = devices.into_iter().map(Into::into).collect();
                 Ok(device_dtos)
@@ -59,8 +59,8 @@ impl DeviceServiceTrait for DeviceService {
 
     /// create device
     async fn create_device(&self, payload: CreateDeviceDto) -> Result<DeviceDto, AppError> {
-        let mut tx = self.pool.begin().await?;
-        match self.repo.create(&mut tx, payload).await {
+        let tx = self.db.begin().await?;
+        match self.repo.create(&tx, payload).await {
             Ok(device) => {
                 tx.commit().await?;
                 Ok(DeviceDto::from(device))
@@ -79,8 +79,8 @@ impl DeviceServiceTrait for DeviceService {
         id: String,
         payload: UpdateDeviceDto,
     ) -> Result<DeviceDto, AppError> {
-        let mut tx = self.pool.begin().await?;
-        match self.repo.update(&mut tx, id, payload).await {
+        let tx = self.db.begin().await?;
+        match self.repo.update(&tx, id, payload).await {
             Ok(Some(device)) => {
                 tx.commit().await?;
                 Ok(DeviceDto::from(device))
@@ -99,8 +99,8 @@ impl DeviceServiceTrait for DeviceService {
 
     /// delete device
     async fn delete_device(&self, id: String) -> Result<String, AppError> {
-        let mut tx = self.pool.begin().await?;
-        match self.repo.delete(&mut tx, id).await {
+        let tx = self.db.begin().await?;
+        match self.repo.delete(&tx, id).await {
             Ok(true) => {
                 tx.commit().await?;
                 Ok("Device deleted".into())
@@ -124,10 +124,10 @@ impl DeviceServiceTrait for DeviceService {
         modified_by: String,
         payload: UpdateManyDevicesDto,
     ) -> Result<String, AppError> {
-        let mut tx = self.pool.begin().await?;
+        let tx = self.db.begin().await?;
         match self
             .repo
-            .update_many(&mut tx, user_id, modified_by, payload)
+            .update_many(&tx, user_id, modified_by, payload)
             .await
         {
             Ok(()) => {

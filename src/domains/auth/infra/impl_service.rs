@@ -13,13 +13,13 @@ use crate::{
     },
 };
 
-use sqlx::PgPool;
+use sea_orm::{DatabaseConnection, TransactionTrait};
 
 /// Service for handling user authentication
 /// and authorization logic.
 #[derive(Clone)]
 pub struct AuthService {
-    pool: PgPool,
+    db: DatabaseConnection,
     repo: Arc<dyn UserAuthRepository + Send + Sync>,
 }
 
@@ -27,16 +27,16 @@ pub struct AuthService {
 #[async_trait::async_trait]
 impl AuthServiceTrait for AuthService {
     /// constructor for the service.
-    fn create_service(pool: PgPool) -> Arc<dyn AuthServiceTrait> {
+    fn create_service(db: DatabaseConnection) -> Arc<dyn AuthServiceTrait> {
         Arc::new(Self {
-            pool,
+            db,
             repo: Arc::new(UserAuthRepo {}),
         })
     }
 
     /// It hashes the password and stores it in the database.
     async fn create_user_auth(&self, auth_user: AuthUserDto) -> Result<(), AppError> {
-        let mut tx = self.pool.begin().await?;
+        let tx = self.db.begin().await?;
 
         let password_hash =
             hash_util::hash_password(&auth_user.password).map_err(|_| AppError::InternalError)?;
@@ -46,7 +46,7 @@ impl AuthServiceTrait for AuthService {
             password_hash,
         };
 
-        match self.repo.create(&mut tx, user_auth).await {
+        match self.repo.create(&tx, user_auth).await {
             Ok(()) => {
                 tx.commit().await?;
                 Ok(())
@@ -70,7 +70,7 @@ impl AuthServiceTrait for AuthService {
 
         let user_auth = self
             .repo
-            .find_by_user_name(self.pool.clone(), auth_payload.client_id.clone())
+            .find_by_user_name(&self.db, auth_payload.client_id.clone())
             .await
             .map_err(AppError::DatabaseError)?;
 

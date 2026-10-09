@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 
 use crate::{
     common::{
@@ -18,7 +18,7 @@ use crate::{
 /// Implementors are responsible for handling user creation and login logic.
 pub trait AuthServiceTrait: Send + Sync {
     /// constructor for the service.
-    fn create_service(pool: PgPool) -> Arc<dyn AuthServiceTrait>
+    fn create_service(db: DatabaseConnection) -> Arc<dyn AuthServiceTrait>
     where
         Self: Sized;
 

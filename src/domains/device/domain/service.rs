@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 
 use crate::{
     common::error::AppError,
@@ -18,7 +18,7 @@ use crate::{
 /// as well as batch updates for user-associated devices.
 pub trait DeviceServiceTrait: Send + Sync {
     /// constructor for the service.
-    fn create_service(pool: PgPool) -> Arc<dyn DeviceServiceTrait>
+    fn create_service(db: DatabaseConnection) -> Arc<dyn DeviceServiceTrait>
     where
         Self: Sized;
 

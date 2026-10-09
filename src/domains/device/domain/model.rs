@@ -3,11 +3,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    decode::Decode,
-    postgres::{PgTypeInfo, PgValueRef},
-    FromRow, Postgres, Type,
-};
 use std::{fmt, str::FromStr};
 use utoipa::ToSchema;
 
@@ -61,23 +56,6 @@ impl From<String> for DeviceStatus {
     }
 }
 
-impl<'r> Decode<'r, Postgres> for DeviceStatus {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let s = <&str as Decode<Postgres>>::decode(value)?;
-        Ok(DeviceStatus::from_str(s)?)
-    }
-}
-
-impl Type<Postgres> for DeviceStatus {
-    fn type_info() -> PgTypeInfo {
-        <&str as Type<Postgres>>::type_info()
-    }
-
-    fn compatible(ty: &PgTypeInfo) -> bool {
-        <&str as Type<Postgres>>::compatible(ty)
-    }
-}
-
 #[allow(clippy::upper_case_acronyms)]
 /// Enum representing the supported operating systems of a device.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -115,25 +93,8 @@ impl From<String> for DeviceOS {
     }
 }
 
-impl<'r> Decode<'r, Postgres> for DeviceOS {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let s = <&str as Decode<Postgres>>::decode(value)?;
-        Ok(DeviceOS::from_str(s)?)
-    }
-}
-
-impl Type<Postgres> for DeviceOS {
-    fn type_info() -> PgTypeInfo {
-        <&str as Type<Postgres>>::type_info()
-    }
-
-    fn compatible(ty: &PgTypeInfo) -> bool {
-        <&str as Type<Postgres>>::compatible(ty)
-    }
-}
-
 /// Domain model representing a device entity.
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone)]
 pub struct Device {
     pub id: String,
     pub user_id: String,

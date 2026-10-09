@@ -1,5 +1,7 @@
 # Clean Axum Demo
 
+> **Note (branch `seaorm-rewrite`):** the persistence layer now uses **SeaORM 2.0.4** instead of raw SQLx; the SQLx offline (`.sqlx`, `SQLX_OFFLINE`, `cargo sqlx prepare`) instructions below are obsolete. See [`SEAORM_MIGRATION.md`](SEAORM_MIGRATION.md).
+
 A minimalist, domain-driven Rust API server template using Axum and SQLx.  
 Designed for clarity, scalability, and rapid development.
 
