@@ -9,7 +9,7 @@ use crate::{
 
 use crate::domains::file::FileServiceTrait;
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
 #[async_trait]
@@ -18,7 +18,7 @@ use std::sync::Arc;
 pub trait UserServiceTrait: Send + Sync {
     /// constructor for the service.
     fn create_service(
-        pool: PgPool,
+        db: DatabaseConnection,
         file_service: Arc<dyn FileServiceTrait>,
     ) -> Arc<dyn UserServiceTrait>
     where

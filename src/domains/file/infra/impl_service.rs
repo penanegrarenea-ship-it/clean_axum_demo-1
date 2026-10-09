@@ -5,7 +5,7 @@ use crate::domains::file::domain::service::FileServiceTrait;
 use crate::domains::file::dto::file_dto::{CreateFileDto, UploadFileDto, UploadedFileDto};
 use crate::domains::file::infra::impl_repository::FileRepo;
 
-use sqlx::{PgPool, Postgres, Transaction};
+use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::path::Path as FilePath;
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ use async_trait::async_trait;
 #[derive(Clone)]
 pub struct FileService {
     config: Config,
-    pool: PgPool,
+    db: DatabaseConnection,
     repo: Arc<dyn FileRepository + Send + Sync>,
 }
 
@@ -25,10 +25,10 @@ pub struct FileService {
 #[async_trait]
 impl FileServiceTrait for FileService {
     /// constructor for the service.
-    fn create_service(config: Config, pool: PgPool) -> Arc<dyn FileServiceTrait> {
+    fn create_service(config: Config, db: DatabaseConnection) -> Arc<dyn FileServiceTrait> {
         Arc::new(Self {
             config,
-            pool,
+            db,
             repo: Arc::new(FileRepo {}),
         })
     }
@@ -38,7 +38,7 @@ impl FileServiceTrait for FileService {
     /// Returns the uploaded file's metadata.
     async fn process_profile_picture_upload(
         &self,
-        tx: &mut Transaction<'_, Postgres>,
+        tx: &DatabaseTransaction,
         upload_file_dto: &UploadFileDto,
     ) -> Result<Option<UploadedFileDto>, AppError> {
         let file_dto = &upload_file_dto.file;
@@ -92,7 +92,7 @@ impl FileServiceTrait for FileService {
     ) -> Result<Option<UploadedFileDto>, AppError> {
         let uploaded_file = self
             .repo
-            .find_by_id(self.pool.clone(), file_id.clone())
+            .find_by_id(&self.db, file_id.clone())
             .await
             .map_err(|err| {
                 tracing::error!("Error retrieving file: {}", err);
@@ -110,11 +110,11 @@ impl FileServiceTrait for FileService {
     /// Removes the file from the filesystem and deletes its metadata from the database.
     /// Returns a success message if the deletion was successful.
     async fn delete_file(&self, file_id: String) -> Result<String, AppError> {
-        let mut tx = self.pool.begin().await?;
+        let tx = self.db.begin().await?;
 
         let to_delete_file = self
             .repo
-            .find_by_id(self.pool.clone(), file_id.clone())
+            .find_by_id(&self.db, file_id.clone())
             .await
             .map_err(|err| {
                 tracing::error!("Error retrieving file: {}", err);
@@ -125,7 +125,7 @@ impl FileServiceTrait for FileService {
             return Err(AppError::NotFound("File not found".into()));
         }
 
-        let deletion_result = self.repo.delete(&mut tx, file_id).await.map_err(|err| {
+        let deletion_result = self.repo.delete(&tx, file_id).await.map_err(|err| {
             tracing::error!("Error deleting file: {}", err);
             AppError::DatabaseError(err)
         })?;
@@ -157,7 +157,7 @@ impl FileService {
     async fn get_file_by_user(&self, user_id: String) -> Result<Option<UploadedFileDto>, AppError> {
         let uploaded_file = self
             .repo
-            .find_by_user_id(self.pool.clone(), user_id)
+            .find_by_user_id(&self.db, user_id)
             .await
             .map_err(|err| {
                 tracing::error!("Error retrieving file: {}", err);

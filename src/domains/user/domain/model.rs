@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
-use sqlx::FromRow;
 /// Domain model representing a user in the application.
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone)]
 pub struct User {
     pub id: String,
     pub username: String,
